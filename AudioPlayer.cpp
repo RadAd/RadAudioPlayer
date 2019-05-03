@@ -55,6 +55,9 @@ BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
 
     GetWindowText(hDlg, pData->strTitle, ARRAYSIZE(pData->strTitle));
 
+    HICON hIcon = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_PLAYER), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
+    SendMessageW(hDlg, WM_SETICON, ICON_BIG, (LPARAM) hIcon);
+
     SetTimer(hDlg, 123, MS / 4, nullptr);
     TrackBar_SetTicFreq(hPosition, 60);
     TrackBar_SetLineSize(hPosition, 10);
