@@ -42,8 +42,8 @@ struct PlayerDlgData
     MCIDEVICEID wDeviceID = 0;
     TCHAR strTitle[1024];
     bool bTracking = false;
-    MCIDEVICEID wLastDeviceID = 0;
-    DWORD_PTR dwLastMode = MCI_MODE_NOT_READY;
+    MCIDEVICEID wLastDeviceID = -1;
+    DWORD_PTR dwLastMode = 0;
 };
 
 BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
@@ -114,6 +114,12 @@ BOOL PlayerDlgOnSysCommand(HWND hDlg, UINT cmd, int x, int y)
 
 void PlayerDlgOnTimer(HWND hDlg, UINT id)
 {
+    static bool bRecursive = false;
+    if (bRecursive)
+        return;
+
+    bRecursive = true;
+
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
     const HWND hPlay = GetDlgItem(hDlg, IDC_PLAY);
@@ -137,6 +143,8 @@ void PlayerDlgOnTimer(HWND hDlg, UINT id)
         DWORD dwPosition = (DWORD) MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_POSITION);
         TrackBar_SetPos(hPosition, dwPosition / MS);
     }
+
+    bRecursive = false;
 }
 
 void PlayerDlgOnDropFiles(HWND hDlg, HDROP hDrop)

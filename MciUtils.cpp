@@ -34,8 +34,12 @@ MCIERROR MciOpen(HWND hDlg, MCIDEVICEID& wDeviceID, LPCTSTR pFileName)
     op.lpstrElementName = pFileName;
     MCIERROR e = mciSendCommand(wDeviceID, MCI_OPEN, MCI_WAIT | MCI_OPEN_ELEMENT, (DWORD_PTR) &op);
     if (e != MMSYSERR_NOERROR)
+    {
+        //MciClose(hDlg, op.wDeviceID);
         MciShowError(hDlg, e);
-    wDeviceID = op.wDeviceID;
+    }
+    else
+        wDeviceID = op.wDeviceID;
     return e;
 }
 

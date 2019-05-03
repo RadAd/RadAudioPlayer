@@ -12,4 +12,7 @@
   <ItemGroup>
     <ResourceCompile Include="AudioPlayer.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\Music.ico" />
+  </ItemGroup>
 </Project>

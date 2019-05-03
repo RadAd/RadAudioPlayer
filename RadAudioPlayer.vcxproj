@@ -173,6 +173,9 @@
   <ItemGroup>
     <ResourceCompile Include="AudioPlayer.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\Music.ico" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
