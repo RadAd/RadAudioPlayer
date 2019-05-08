@@ -25,6 +25,10 @@
 #define HANDLE_WM_SYSCOMMAND(hwnd, wParam, lParam, fn) \
     ((fn)((hwnd), (UINT)(wParam), (int)(short)LOWORD(lParam), (int)(short)HIWORD(lParam)))
 
+/* void Cls_OnAppCommand(HWND hwnd, HWND hchild, UINT cmd, UINT uDevice, DWORD dwKeys) */
+#define HANDLE_WM_APPCOMMAND(hwnd, wParam, lParam, fn) \
+    ((fn)((hwnd), (HWND)(wParam), GET_APPCOMMAND_LPARAM(lParam), GET_DEVICE_LPARAM(lParam), GET_KEYSTATE_LPARAM(lParam)), TRUE)
+
 #define MS (1000)
 #define WM_AP_OPEN (WM_USER + 10)
 
@@ -73,6 +77,7 @@ BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
     pData->hIcoPause = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_PAUSE), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
 
     SetTimer(hDlg, 123, MS / 4, nullptr);
+    SendMessage(hDlg, WM_TIMER, 0 , 0);
     TrackBar_SetTicFreq(hPosition, 60);
     TrackBar_SetLineSize(hPosition, 10);
     TrackBar_SetPageSize(hPosition, 60);
@@ -272,6 +277,29 @@ BOOL PlayerDlgOnNotify(HWND hDlg, int id, LPNMHDR pNmHdr)
         return FALSE;
 }
 
+void PlayerDlgOnAppCommand(HWND hDlg, HWND hChild, UINT cmd, UINT uDevice, DWORD dwKeys)
+{
+    PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
+    switch (cmd)
+    {
+    case APPCOMMAND_MEDIA_PLAY:
+        MciPlay(hDlg, pData->wDeviceID);
+        break;
+    case APPCOMMAND_MEDIA_PAUSE:
+        MciPause(hDlg, pData->wDeviceID);
+        break;
+    case APPCOMMAND_MEDIA_PLAY_PAUSE:
+        {
+            DWORD_PTR dwMode = MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_MODE);
+            if (dwMode == MCI_MODE_PLAY)
+                MciPause(hDlg, pData->wDeviceID);
+            else
+                MciPlay(hDlg, pData->wDeviceID);
+        }
+        break;
+    }
+}
+
 INT_PTR PlayerDlgProc(
     HWND hDlg,
     UINT uMsg,
@@ -288,6 +316,7 @@ INT_PTR PlayerDlgProc(
         HANDLE_MSG(hDlg, WM_NOTIFY, PlayerDlgOnNotify);
         HANDLE_DLGMSG(hDlg, WM_TIMER, PlayerDlgOnTimer);
         HANDLE_DLGMSG(hDlg, WM_DROPFILES, PlayerDlgOnDropFiles);
+        HANDLE_MSG(hDlg, WM_APPCOMMAND, PlayerDlgOnAppCommand);
 
     case WM_AP_OPEN: PlayerDlgOnAPOpen(hDlg, (LPCTSTR) lParam); return TRUE;
     case WM_MCI_ERROR: PlayerDlgOnMciError(hDlg, (LPCTSTR) lParam); return TRUE;
