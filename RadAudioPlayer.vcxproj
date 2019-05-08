@@ -175,6 +175,8 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\Music.ico" />
+    <Image Include="res\pause.ico" />
+    <Image Include="res\play.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

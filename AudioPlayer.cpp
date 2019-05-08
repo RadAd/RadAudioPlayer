@@ -19,9 +19,6 @@
     case (message): \
         return (SetDlgMsgResult(hwnd, message, \
             HANDLE_##message((hwnd), (wParam), (lParam), (fn))))
-#define HANDLE_DLGMSG_RET(hwnd, message, fn) \
-    case (message): \
-        return (HANDLE_##message((hwnd), (wParam), (lParam), (fn)))
 
 /* BOOL Cls_OnSysCommand(HWND hwnd, UINT cmd, int x, int y) */
 #undef HANDLE_WM_SYSCOMMAND
@@ -44,6 +41,8 @@ struct PlayerDlgData
     bool bTracking = false;
     MCIDEVICEID wLastDeviceID = -1;
     DWORD_PTR dwLastMode = 0;
+    HICON hIcoPlay = NULL;
+    HICON hIcoPause = NULL;
 };
 
 BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
@@ -57,6 +56,9 @@ BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
 
     HICON hIcon = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_PLAYER), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
     SendMessageW(hDlg, WM_SETICON, ICON_BIG, (LPARAM) hIcon);
+
+    pData->hIcoPlay = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_PLAY), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
+    pData->hIcoPause = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_PAUSE), IMAGE_ICON, 0, 0, LR_DEFAULTCOLOR | LR_DEFAULTSIZE);
 
     SetTimer(hDlg, 123, MS / 4, nullptr);
     TrackBar_SetTicFreq(hPosition, 60);
@@ -137,7 +139,8 @@ void PlayerDlgOnTimer(HWND hDlg, UINT id)
     DWORD_PTR dwMode = pData->wDeviceID != 0 ? MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_MODE) : MCI_MODE_NOT_READY;
     if (pData->dwLastMode != dwMode)
     {
-        SetWindowText(hPlay, dwMode == MCI_MODE_PLAY ? _T("Pause") : _T("Play"));
+        //SetWindowText(hPlay, dwMode == MCI_MODE_PLAY ? _T("Pause") : _T("Play"));
+        SendMessage(hPlay, BM_SETIMAGE, IMAGE_ICON, (LPARAM) (dwMode == MCI_MODE_PLAY ? pData->hIcoPause : pData->hIcoPlay));
         pData->dwLastMode = dwMode;
     }
 
@@ -242,11 +245,11 @@ INT_PTR PlayerDlgProc(
 {
     switch (uMsg)
     {
-        HANDLE_DLGMSG(hDlg, WM_INITDIALOG, PlayerDlgOnInitDialog);
+        HANDLE_MSG(hDlg, WM_INITDIALOG, PlayerDlgOnInitDialog);
         HANDLE_DLGMSG(hDlg, WM_DESTROY, PlayerDlgOnDestroy);
         HANDLE_DLGMSG(hDlg, WM_COMMAND, PlayerDlgOnCommand);
-        HANDLE_DLGMSG_RET(hDlg, WM_SYSCOMMAND, PlayerDlgOnSysCommand);
-        HANDLE_DLGMSG_RET(hDlg, WM_NOTIFY, PlayerDlgOnNotify);
+        HANDLE_MSG(hDlg, WM_SYSCOMMAND, PlayerDlgOnSysCommand);
+        HANDLE_MSG(hDlg, WM_NOTIFY, PlayerDlgOnNotify);
         HANDLE_DLGMSG(hDlg, WM_TIMER, PlayerDlgOnTimer);
         HANDLE_DLGMSG(hDlg, WM_DROPFILES, PlayerDlgOnDropFiles);
 

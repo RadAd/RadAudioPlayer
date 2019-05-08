@@ -14,5 +14,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\Music.ico" />
+    <Image Include="res\pause.ico" />
+    <Image Include="res\play.ico" />
   </ItemGroup>
 </Project>
