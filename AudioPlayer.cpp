@@ -34,6 +34,18 @@ LPCTSTR PathFindName(LPCTSTR pFullName)
     return pName ? pName + 1 : pFullName;
 }
 
+void FormatTime(DWORD t, LPTSTR buf, DWORD len)
+{
+    DWORD h = t / (60 * 60);
+    t = t % (60 * 60);
+    DWORD m = t / 60;
+    DWORD s = t % 60;
+    if (h > 0)
+        _stprintf_s(buf, len, _T("%d:%02d:%02d"), h, m, s);
+    else
+        _stprintf_s(buf, len, _T("%d:%02d"), m, s);
+}
+
 struct PlayerDlgData
 {
     MCIDEVICEID wDeviceID = 0;
@@ -128,6 +140,7 @@ void PlayerDlgOnTimer(HWND hDlg, UINT id)
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
     const HWND hPlay = GetDlgItem(hDlg, IDC_PLAY);
+    const HWND hBegin = GetDlgItem(hDlg, IDC_BEGIN);
 
     if (pData->wLastDeviceID != pData->wDeviceID)
     {
@@ -141,13 +154,26 @@ void PlayerDlgOnTimer(HWND hDlg, UINT id)
     {
         //SetWindowText(hPlay, dwMode == MCI_MODE_PLAY ? _T("Pause") : _T("Play"));
         SendMessage(hPlay, BM_SETIMAGE, IMAGE_ICON, (LPARAM) (dwMode == MCI_MODE_PLAY ? pData->hIcoPause : pData->hIcoPlay));
+
+        if (pData->dwLastMode == MCI_MODE_PLAY && dwMode == MCI_MODE_STOP)
+        {
+            MciSeekTo(hDlg, pData->wDeviceID, 0);
+            TrackBar_SetPos(hPosition, 0);
+            TCHAR buf[100];
+            FormatTime(0, buf, ARRAYSIZE(buf));
+            SetWindowText(hBegin, buf);
+        }
+
         pData->dwLastMode = dwMode;
     }
 
     if (!pData->bTracking && dwMode == MCI_MODE_PLAY)
     {
-        DWORD dwPosition = (DWORD) MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_POSITION);
-        TrackBar_SetPos(hPosition, dwPosition / MS);
+        DWORD dwPosition = (DWORD) MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_POSITION) / MS;
+        TrackBar_SetPos(hPosition, dwPosition);
+        TCHAR buf[100];
+        FormatTime(dwPosition, buf, ARRAYSIZE(buf));
+        SetWindowText(hBegin, buf);
     }
 
     bRecursive = false;
@@ -169,6 +195,7 @@ void PlayerDlgOnAPOpen(HWND hDlg, LPCTSTR pFileName)
 {
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
+    const HWND hEnd = GetDlgItem(hDlg, IDC_END);
 
     if (MciOpen(hDlg, pData->wDeviceID, pFileName) == MMSYSERR_NOERROR)
     {
@@ -177,8 +204,12 @@ void PlayerDlgOnAPOpen(HWND hDlg, LPCTSTR pFileName)
         SetWindowText(hDlg, buf);
 
         //DWORD_PTR dwTimeFormat = MciGetStatus(hDlg, MCI_STATUS_TIME_FORMAT);
-        DWORD dwLength = (DWORD) MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_LENGTH);
-        TrackBar_SetRange(hPosition, 0, (WORD) (dwLength / MS));
+        DWORD dwLength = (DWORD) MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_LENGTH) / MS;
+        TrackBar_SetRange(hPosition, 0, (WORD) dwLength);
+
+        FormatTime(dwLength, buf, ARRAYSIZE(buf));
+        SetWindowText(hEnd, buf);
+
         MciPlay(hDlg, pData->wDeviceID);
     }
     else
@@ -197,6 +228,7 @@ BOOL PlayerDlgOnNotify(HWND hDlg, int id, LPNMHDR pNmHdr)
 {
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
+    const HWND hBegin = GetDlgItem(hDlg, IDC_BEGIN);
 
     if (id == IDC_POSITION)
     {
@@ -219,6 +251,10 @@ BOOL PlayerDlgOnNotify(HWND hDlg, int id, LPNMHDR pNmHdr)
                 if (pPosChanging->nReason == TB_THUMBTRACK)
                 {
                     pData->bTracking = true;
+                    DWORD dwTo = TrackBar_GetPos(hPosition);
+                    TCHAR buf[100];
+                    FormatTime(dwTo, buf, ARRAYSIZE(buf));
+                    SetWindowText(hBegin, buf);
                 }
                 else if (pPosChanging->nReason != TB_THUMBPOSITION && pPosChanging->nReason != TB_ENDTRACK)
                 {
