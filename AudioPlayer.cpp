@@ -9,7 +9,6 @@
 
 // TODO
 // Volume
-// Text time
 // Format trackbar tooltip
 // Playlist
 // Tags
@@ -200,6 +199,7 @@ void PlayerDlgOnAPOpen(HWND hDlg, LPCTSTR pFileName)
 {
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
+    const HWND hBegin = GetDlgItem(hDlg, IDC_BEGIN);
     const HWND hEnd = GetDlgItem(hDlg, IDC_END);
 
     if (MciOpen(hDlg, pData->wDeviceID, pFileName) == MMSYSERR_NOERROR)
@@ -220,6 +220,8 @@ void PlayerDlgOnAPOpen(HWND hDlg, LPCTSTR pFileName)
     else
     {
         SetWindowText(hDlg, pData->strTitle);
+        SetWindowText(hBegin, _T(""));
+        SetWindowText(hEnd, _T(""));
     }
 }
 
@@ -264,9 +266,16 @@ BOOL PlayerDlgOnNotify(HWND hDlg, int id, LPNMHDR pNmHdr)
                 else if (pPosChanging->nReason != TB_THUMBPOSITION && pPosChanging->nReason != TB_ENDTRACK)
                 {
                     DWORD_PTR dwMode = MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_MODE);
-                    MciSeekTo(hDlg, pData->wDeviceID, pPosChanging->dwPos * MS);
+                    DWORD dwLength = (DWORD) MciGetStatus(hDlg, pData->wDeviceID, MCI_STATUS_LENGTH);
+                    DWORD dwPos = pPosChanging->dwPos * MS;
+                    if (dwPos > dwLength)
+                        dwPos = dwLength;
+                    MciSeekTo(hDlg, pData->wDeviceID, dwPos);
                     if (dwMode == MCI_MODE_PLAY)
                         MciPlay(hDlg, pData->wDeviceID);
+                    TCHAR buf[100];
+                    FormatTime(dwPos / MS, buf, ARRAYSIZE(buf));
+                    SetWindowText(hBegin, buf);
                 }
             }
             break;
