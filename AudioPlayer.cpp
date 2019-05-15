@@ -66,6 +66,7 @@ BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
     SetWindowLongPtr(hDlg, DWLP_USER, (LONG_PTR) pData);
 
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
+    const HWND hVolume = GetDlgItem(hDlg, IDC_VOLUME);
 
     GetWindowText(hDlg, pData->strTitle, ARRAYSIZE(pData->strTitle));
 
@@ -80,6 +81,11 @@ BOOL PlayerDlgOnInitDialog(HWND hDlg, HWND hWndFocus, LPARAM lParam)
     TrackBar_SetTicFreq(hPosition, 60);
     TrackBar_SetLineSize(hPosition, 10);
     TrackBar_SetPageSize(hPosition, 60);
+    TrackBar_SetTicFreq(hVolume, 10);
+    TrackBar_SetLineSize(hVolume, 1);
+    TrackBar_SetPageSize(hVolume, 10);
+    TrackBar_SetRange(hVolume, 0, 100);
+    TrackBar_SetPos(hVolume, 100 - 100);
 
     for (int i = 1; i < __argc; ++i)
     {
@@ -199,6 +205,7 @@ void PlayerDlgOnAPOpen(HWND hDlg, LPCTSTR pFileName)
 {
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
+    const HWND hVolume = GetDlgItem(hDlg, IDC_VOLUME);
     const HWND hBegin = GetDlgItem(hDlg, IDC_BEGIN);
     const HWND hEnd = GetDlgItem(hDlg, IDC_END);
 
@@ -214,6 +221,9 @@ void PlayerDlgOnAPOpen(HWND hDlg, LPCTSTR pFileName)
 
         FormatTime(dwLength, buf, ARRAYSIZE(buf));
         SetWindowText(hEnd, buf);
+
+        DWORD dwVolume = 100 - TrackBar_GetPos(hVolume);
+        MciSetVolume(hDlg, pData->wDeviceID, dwVolume * 10);
 
         MciPlay(hDlg, pData->wDeviceID);
     }
@@ -235,10 +245,12 @@ BOOL PlayerDlgOnNotify(HWND hDlg, int id, LPNMHDR pNmHdr)
 {
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
     const HWND hPosition = GetDlgItem(hDlg, IDC_POSITION);
+    const HWND hVolume = GetDlgItem(hDlg, IDC_VOLUME);
     const HWND hBegin = GetDlgItem(hDlg, IDC_BEGIN);
 
-    if (id == IDC_POSITION)
+    switch (id)
     {
+    case IDC_POSITION:
         switch (pNmHdr->code)
         {
         case NM_RELEASEDCAPTURE:
@@ -281,14 +293,47 @@ BOOL PlayerDlgOnNotify(HWND hDlg, int id, LPNMHDR pNmHdr)
             break;
         }
         return TRUE;
-    }
-    else
+
+    case IDC_VOLUME:
+        switch (pNmHdr->code)
+        {
+        case NM_RELEASEDCAPTURE:
+            if (pData->wDeviceID != 0)
+            {
+                DWORD dwVolume = 100 - TrackBar_GetPos(hVolume);
+                MciSetVolume(hDlg, pData->wDeviceID, dwVolume * 10);
+            }
+            break;
+
+        case TRBN_THUMBPOSCHANGING:
+            if (pData->wDeviceID != 0)
+            {
+                const NMTRBTHUMBPOSCHANGING* pPosChanging = (NMTRBTHUMBPOSCHANGING*) pNmHdr;
+                DWORD dwPos = 100 - pPosChanging->dwPos;
+                if (dwPos > (MAXDWORD / 2)) dwPos = 0;
+                if (dwPos > 100) dwPos = 100;
+                if (pPosChanging->nReason == TB_THUMBTRACK)
+                {
+                    MciSetVolume(hDlg, pData->wDeviceID, dwPos * 10);
+                }
+                else if (pPosChanging->nReason != TB_THUMBPOSITION && pPosChanging->nReason != TB_ENDTRACK)
+                {
+                    MciSetVolume(hDlg, pData->wDeviceID, dwPos * 10);
+                }
+            }
+            break;
+        }
+        return TRUE;
+
+    default:
         return FALSE;
+    }
 }
 
 void PlayerDlgOnAppCommand(HWND hDlg, HWND hChild, UINT cmd, UINT uDevice, DWORD dwKeys)
 {
     PlayerDlgData* pData = (PlayerDlgData*) GetWindowLongPtr(hDlg, DWLP_USER);
+    const HWND hVolume = GetDlgItem(hDlg, IDC_VOLUME);
     switch (cmd)
     {
     case APPCOMMAND_MEDIA_PLAY:
@@ -304,6 +349,24 @@ void PlayerDlgOnAppCommand(HWND hDlg, HWND hChild, UINT cmd, UINT uDevice, DWORD
                 MciPause(hDlg, pData->wDeviceID);
             else
                 MciPlay(hDlg, pData->wDeviceID);
+        }
+        break;
+    case APPCOMMAND_VOLUME_DOWN:
+        {
+            DWORD dwVolume = 100 - TrackBar_GetPos(hVolume);
+            dwVolume -= 10;
+            if (dwVolume > (DWORD) -100) dwVolume = 0;
+            MciSetVolume(hDlg, pData->wDeviceID, dwVolume * 10);
+            TrackBar_SetPos(hVolume, 100 - dwVolume);
+        }
+        break;
+    case APPCOMMAND_VOLUME_UP:
+        {
+            DWORD dwVolume = 100 - TrackBar_GetPos(hVolume);
+            dwVolume += 10;
+            if (dwVolume > 100) dwVolume = 100;
+            MciSetVolume(hDlg, pData->wDeviceID, dwVolume * 10);
+            TrackBar_SetPos(hVolume, 100 - dwVolume);
         }
         break;
     }

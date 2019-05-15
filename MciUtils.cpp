@@ -1,5 +1,10 @@
 #include <Windows.h>
 #include "MciUtils.h"
+#include <stdio.h>
+#include <tchar.h>
+
+// TODO Use a different alias for each open
+#define DEF_ALIAS _T("music")
 
 static void MciShowError(HWND hDlg, MCIERROR e)
 {
@@ -32,7 +37,8 @@ MCIERROR MciOpen(HWND hDlg, MCIDEVICEID& wDeviceID, LPCTSTR pFileName)
     MCI_OPEN_PARMS op = {};
     op.dwCallback = MAKELONG(hDlg, 0);
     op.lpstrElementName = pFileName;
-    MCIERROR e = mciSendCommand(wDeviceID, MCI_OPEN, MCI_WAIT | MCI_OPEN_ELEMENT, (DWORD_PTR) &op);
+    op.lpstrAlias = DEF_ALIAS;
+    MCIERROR e = mciSendCommand(wDeviceID, MCI_OPEN, MCI_WAIT | MCI_OPEN_ELEMENT | MCI_OPEN_ALIAS, (DWORD_PTR) &op);
     if (e != MMSYSERR_NOERROR)
     {
         //MciClose(hDlg, op.wDeviceID);
@@ -76,4 +82,19 @@ void MciSeekTo(HWND hDlg, MCIDEVICEID wDeviceID, DWORD dwTo)
     MCIERROR e = mciSendCommand(wDeviceID, MCI_SEEK, MCI_WAIT | MCI_TO, (DWORD_PTR) &sp);
     if (e != MMSYSERR_NOERROR)
         MciShowError(hDlg, e);
+}
+
+void MciSetVolume(HWND hDlg, MCIDEVICEID wDeviceID, DWORD dwVolume)
+{
+    TCHAR buffer[1024];
+    _stprintf_s(buffer, ARRAYSIZE(buffer), _T("setaudio %s volume to %d"), DEF_ALIAS, dwVolume);
+
+    TCHAR ret[1024];
+    MCIERROR e = mciSendString(buffer, ret, ARRAYSIZE(ret), hDlg);
+    if (e != MMSYSERR_NOERROR)
+        MciShowError(hDlg, e);
+#if 0
+    if (ret[0] != _T('\0'))
+        _ftprintf(stdout, _T("%s\n"), ret);
+#endif
 }
