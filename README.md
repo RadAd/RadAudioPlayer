@@ -9,3 +9,5 @@ Simple audio player using win32 mci
 [![Releases](https://img.shields.io/github/release/RadAd/RadAudioPlayer.svg)](https://github.com/RadAd/RadAudioPlayer/releases/latest)
 [![commits-since](https://img.shields.io/github/commits-since/RadAd/RadAudioPlayer/latest.svg)](commits/master)
 [![Build](https://img.shields.io/appveyor/ci/RadAd/RadAudioPlayer.svg)](https://ci.appveyor.com/project/RadAd/RadAudioPlayer)
+
+![Screenshot](docs/screenshot.png)
